@@ -1,5 +1,6 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import '../../../core/theme/careosis_theme.dart';
 import '../../../core/components/careosis_components.dart';
 import '../../../data/repository/careosis_repository.dart';
@@ -29,6 +30,13 @@ class ExpenseManagementScreen extends StatelessWidget {
         builder: (context, snapshot) {
           final expenses = snapshot.data ?? [];
           final double totalSpent = expenses.fold(0.0, (sum, e) => sum + e.amount);
+          final double approvedSpent = expenses
+              .where((e) => e.status.toLowerCase().contains("approved") || e.status.toLowerCase() == "submitted")
+              .fold(0.0, (sum, e) => sum + e.amount);
+          final double pendingSpent = expenses
+              .where((e) => e.status.toLowerCase().contains("pending") || e.status.toLowerCase().contains("approval") || e.status.toLowerCase().contains("review"))
+              .fold(0.0, (sum, e) => sum + e.amount);
+          const double policyLimit = 25000.0;
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -54,9 +62,9 @@ class ExpenseManagementScreen extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          _buildExpenseStat("Approved", "₹12,400", CareOsisColors.statusGreen),
-                          _buildExpenseStat("Pending", "₹3,150", CareOsisColors.statusOrange),
-                          _buildExpenseStat("Policy Limit", "₹25,000", Colors.blueGrey),
+                          _buildExpenseStat("Approved", "₹${approvedSpent.toStringAsFixed(0)}", CareOsisColors.statusGreen),
+                          _buildExpenseStat("Pending", "₹${pendingSpent.toStringAsFixed(0)}", CareOsisColors.statusOrange),
+                          _buildExpenseStat("Policy Limit", "₹${policyLimit.toStringAsFixed(0)}", Colors.blueGrey),
                         ],
                       ),
                     ],
@@ -79,10 +87,12 @@ class ExpenseManagementScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 if (expenses.isEmpty)
-                  const Card(
-                    child: Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Text("No field expenses logged for this period.", textAlign: TextAlign.center),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: CareOsisEmptyState(
+                      icon: Icons.receipt_long_outlined,
+                      title: "No Field Expenses Logged",
+                      subtitle: "Submit mileage, daily food allowance, and field claims to track your reimbursements live.",
                     ),
                   )
                 else
@@ -287,7 +297,7 @@ class _LogExpenseFormScreenState extends State<LogExpenseFormScreen> {
                 final expenseId = "EXP-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}";
                 final exp = ExpenseModel(
                   id: expenseId,
-                  date: "21 Aug 2026",
+                  date: DateFormat("dd MMM yyyy").format(DateTime.now()),
                   category: _category,
                   amount: amount,
                   description: _descController.text.trim(),

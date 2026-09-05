@@ -171,4 +171,60 @@ void main() {
       expect(duration, '45m');
     });
   });
+
+  group('Live Expense & Target Aggregation Tests', () {
+    test('EXP-AGG-01: Dynamic calculation of approved and pending claim sums', () {
+      final sampleExpenses = [
+        const ExpenseModel(
+          id: 'EXP-1',
+          date: '01 Sep 2026',
+          category: 'Travel / Fuel',
+          amount: 1500.0,
+          description: 'Field travel north zone',
+          status: 'Approved',
+          createdAt: 1000,
+        ),
+        const ExpenseModel(
+          id: 'EXP-2',
+          date: '02 Sep 2026',
+          category: 'Daily Allowance',
+          amount: 450.0,
+          description: 'Lunch allowance',
+          status: 'Submitted',
+          createdAt: 2000,
+        ),
+        const ExpenseModel(
+          id: 'EXP-3',
+          date: '03 Sep 2026',
+          category: 'Hotel & Lodging',
+          amount: 2800.0,
+          description: 'Night stay outstation',
+          status: 'Pending Approval (Exceeds daily limit)',
+          createdAt: 3000,
+        ),
+      ];
+
+      final totalSpent = sampleExpenses.fold(0.0, (sum, e) => sum + e.amount);
+      final approvedSpent = sampleExpenses
+          .where((e) => e.status.toLowerCase().contains('approved') || e.status.toLowerCase() == 'submitted')
+          .fold(0.0, (sum, e) => sum + e.amount);
+      final pendingSpent = sampleExpenses
+          .where((e) => e.status.toLowerCase().contains('pending'))
+          .fold(0.0, (sum, e) => sum + e.amount);
+
+      expect(totalSpent, 4750.0);
+      expect(approvedSpent, 1950.0);
+      expect(pendingSpent, 2800.0);
+    });
+
+    test('TGT-01: Dynamic target percentage and remaining calculation', () {
+      const target = 250000.0;
+      const sales = 175000.0;
+      final percent = (sales / target) * 100;
+      final shortfall = target - sales;
+
+      expect(percent, 70.0);
+      expect(shortfall, 75000.0);
+    });
+  });
 }

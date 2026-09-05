@@ -298,6 +298,7 @@ class CareOsisRepository {
   Stream<ExpenseModel?> getExpenseById(String id) => _database.commercialDao.getExpenseById(id);
   Future<void> createExpense(ExpenseModel expense) async {
     await _database.commercialDao.insertExpense(expense);
+    final mrId = _currentUser?.id ?? _database.mrProfiles.values.firstOrNull?.empId ?? "CO-MR-8492";
     await _database.platformDao.enqueueSync(
       SyncQueueModel(
         entityType: "EXPENSE",
@@ -307,6 +308,8 @@ class CareOsisRepository {
         createdAt: DateTime.now().millisecondsSinceEpoch,
       ),
     );
+    // Push expense to Supabase Cloud
+    SupabaseSyncService.instance.syncExpense(expense, mrId: mrId);
   }
 
   Future<void> updateExpenseStatus(String expenseId, String status) async {

@@ -159,11 +159,11 @@ class SupabaseSyncService {
       final payload = {
         'id': expense.id,
         'mr_id': mrId ?? 'CO-MR-8492',
-        'expense_date': expense.expenseDate,
+        'expense_date': expense.date,
         'category': expense.category,
         'amount': expense.amount,
-        'receipt_url': expense.receiptUrl,
-        'notes': expense.notes,
+        'receipt_url': expense.receiptPath,
+        'notes': expense.description,
         'status': expense.status,
         'sync_status': 'SYNCED',
       };
@@ -172,6 +172,42 @@ class SupabaseSyncService {
       return true;
     } catch (e) {
       debugPrint("Expense sync to Supabase failed: $e");
+      return false;
+    }
+  }
+
+  // ==========================================
+  // Targets & Incentives Cloud Sync
+  // ==========================================
+
+  /// Upserts monthly target and incentive performance to Supabase targets_incentives table
+  Future<bool> syncTargetIncentive({
+    required String mrId,
+    required String month,
+    required double targetAmount,
+    required double achievedAmount,
+    required double incentiveEarned,
+    String payoutStatus = "PENDING",
+  }) async {
+    if (!_isInitialized || client == null) return false;
+
+    try {
+      final id = "TI-$mrId-$month".replaceAll(" ", "-");
+      final payload = {
+        'id': id,
+        'mr_id': mrId,
+        'month': month,
+        'target_amount': targetAmount,
+        'achieved_amount': achievedAmount,
+        'incentive_earned': incentiveEarned,
+        'payout_status': payoutStatus,
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+
+      await client!.from('targets_incentives').upsert(payload);
+      return true;
+    } catch (e) {
+      debugPrint("Target & Incentive sync to Supabase failed: $e");
       return false;
     }
   }

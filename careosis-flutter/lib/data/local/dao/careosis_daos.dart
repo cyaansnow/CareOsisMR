@@ -322,7 +322,7 @@ class CommercialDao {
   }
 
   Stream<List<ExpenseModel>> getAllExpenses() {
-    return Stream.value(_db.expenses.values.toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt)));
+    return _db.expensesStream;
   }
 
   Stream<ExpenseModel?> getExpenseById(String id) {
