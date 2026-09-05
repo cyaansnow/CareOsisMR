@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../../core/theme/careosis_theme.dart';
 import '../../../data/repository/careosis_repository.dart';
 import '../../../core/engine/incentive_calculation_engine.dart';
@@ -19,26 +20,34 @@ class IncentiveBreakdownModal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = repository.currentUser;
+    final profile = repository.database.mrProfileDao.getProfileSync();
+    final periodStr = DateFormat('MMMM yyyy').format(DateTime.now());
+
     const defaultRule = IncentiveRuleModel(
-      id: "RULE-SLAB-AUG2026-V1",
-      ruleName: "Standard CareOsis Q3 Slab Policy",
+      id: "RULE-SLAB-DYNAMIC",
+      ruleName: "Standard CareOsis Slab Policy",
       ruleType: "PERCENTAGE_OF_SALES",
       defaultTarget: 200000.0,
       updatedAt: 1700000000,
     );
 
+    final actualSales = profile?.monthlySales ?? 0.0;
+    final target = profile?.monthlyTarget ?? user?.monthlyTarget ?? 200000.0;
+    final visitsDone = profile?.completedVisitsToday ?? 0;
+    final visitsTarget = profile?.targetVisitsToday ?? 15;
+
     final result = IncentiveCalculationEngine.calculateIncentive(
       input: CalculationInput(
-        employeeId: user?.id ?? "CO-MR-8492",
-        employeeName: user?.name ?? "Aman Chhabra",
-        employeeMonthlyTarget: user?.monthlyTarget ?? 200000.0,
-        period: "August 2026",
-        actualSales: 164000.0,
-        doctorVisitsDone: 12,
-        doctorVisitsTarget: 15,
-        newDoctorsActivated: 6,
-        collectionAmount: 180000.0,
-        collectionTarget: 200000.0,
+        employeeId: user?.id ?? profile?.empId ?? "MR",
+        employeeName: user?.name ?? profile?.name ?? "Representative",
+        employeeMonthlyTarget: target,
+        period: periodStr,
+        actualSales: actualSales,
+        doctorVisitsDone: visitsDone,
+        doctorVisitsTarget: visitsTarget,
+        newDoctorsActivated: 0,
+        collectionAmount: actualSales,
+        collectionTarget: target,
       ),
       rule: defaultRule,
     );

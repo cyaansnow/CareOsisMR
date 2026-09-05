@@ -41,7 +41,7 @@ class PerformanceScreen extends StatelessWidget {
 
           final res = IncentiveCalculationEngine.calculateIncentive(
             input: CalculationInput(
-              employeeId: profile?.empId ?? "CO-MR-8492",
+              employeeId: profile?.empId ?? repository.currentUser?.id ?? "MR",
               employeeName: profile?.name ?? "Field MR",
               employeeMonthlyTarget: target,
               period: currentMonth,
@@ -227,7 +227,7 @@ class PerformanceScreen extends StatelessWidget {
                 // Supabase Cloud Sync Action
                 ElevatedButton.icon(
                   onPressed: () async {
-                    final mrId = profile?.empId ?? "CO-MR-8492";
+                    final mrId = profile?.empId ?? widget.repository.currentUser?.id ?? "MR";
                     final success = await SupabaseSyncService.instance.syncTargetIncentive(
                       mrId: mrId,
                       month: currentMonth,
@@ -352,7 +352,7 @@ class _IncentiveScreenState extends State<IncentiveScreen> {
 
         final res = IncentiveCalculationEngine.calculateIncentive(
           input: CalculationInput(
-            employeeId: profile?.empId ?? "CO-MR-8492",
+            employeeId: profile?.empId ?? widget.repository.currentUser?.id ?? "MR",
             employeeName: profile?.name ?? "Field MR",
             employeeMonthlyTarget: target,
             period: currentMonth,

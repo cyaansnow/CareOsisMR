@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/repository/careosis_repository.dart';
 import '../../features/auth/presentation/login_screen.dart';
@@ -16,7 +16,19 @@ import '../../features/super_admin/presentation/super_admin_screen.dart';
 
 GoRouter createRouter(CareOsisRepository repository) {
   return GoRouter(
-    initialLocation: '/login',
+    initialLocation: repository.currentUser != null ? '/home' : '/login',
+    redirect: (context, state) {
+      final isLoggedIn = repository.currentUser != null;
+      final isLoggingIn = state.matchedLocation == '/login';
+
+      if (!isLoggedIn && !isLoggingIn) {
+        return '/login';
+      }
+      if (isLoggedIn && isLoggingIn) {
+        return '/home';
+      }
+      return null;
+    },
     routes: [
       GoRoute(
         path: '/login',

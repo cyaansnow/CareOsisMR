@@ -23,15 +23,18 @@ class HomeDashboardScreen extends StatelessWidget {
           stream: repository.getMRProfile(),
           builder: (context, snapshot) {
             final profile = snapshot.data;
+            final user = repository.currentUser;
+            final displayName = user?.name ?? profile?.name ?? "Field Representative";
+            final displayTerritory = profile?.territory ?? user?.territoryName ?? "Field Operations";
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  profile?.name ?? "Aman Chhabra",
+                  displayName,
                   style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
                 Text(
-                  profile?.territory ?? "North Delhi & Rohini Central",
+                  displayTerritory,
                   style: const TextStyle(fontSize: 12, color: Colors.white70),
                 ),
               ],
@@ -115,180 +118,229 @@ class HomeDashboardScreen extends StatelessWidget {
   }
 
   Widget _buildIncentiveCard(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [CareOsisColors.medicalEmeraldPrimary, Color(0xFF004D40)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: CareOsisColors.medicalEmeraldPrimary.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    return StreamBuilder<MRProfile?>(
+      stream: repository.getMRProfile(),
+      builder: (context, snapshot) {
+        final profile = snapshot.data;
+        final sales = profile?.monthlySales ?? 0.0;
+        final target = profile?.monthlyTarget ?? (repository.currentUser?.monthlyTarget ?? 200000.0);
+        final achPercent = target > 0 ? (sales / target) * 100 : 0.0;
+
+        double slabRate = 0.0;
+        if (achPercent >= 120) {
+          slabRate = 7.5;
+        } else if (achPercent >= 100) {
+          slabRate = 5.0;
+        } else if (achPercent >= 90) {
+          slabRate = 3.0;
+        } else if (achPercent >= 70) {
+          slabRate = 2.0;
+        }
+        final earnedIncentive = sales * (slabRate / 100);
+        final currentMonthStr = DateFormat('MMMM yyyy').format(DateTime.now());
+
+        return Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [CareOsisColors.medicalEmeraldPrimary, CareOsisColors.medicalPrimaryDark],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: CareOsisColors.medicalEmeraldPrimary.withOpacity(0.3),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-        ],
-      ),
-      padding: const EdgeInsets.all(18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Row(
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Icon(Icons.workspace_premium, color: CareOsisColors.goldMetallic, size: 22),
-                  SizedBox(width: 6),
-                  Text(
-                    "INCENTIVE THIS MONTH",
-                    style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1),
+                  const Row(
+                    children: [
+                      Icon(Icons.workspace_premium, color: CareOsisColors.goldMetallic, size: 22),
+                      SizedBox(width: 6),
+                      Text(
+                        "INCENTIVE THIS MONTH",
+                        style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.18),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      achPercent >= 70 ? "Eligible" : "Pending Quota",
+                      style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ],
               ),
+              const SizedBox(height: 12),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    "₹${NumberFormat('#,##,###').format(earnedIncentive.round())}",
+                    style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    currentMonthStr,
+                    style: const TextStyle(color: Colors.white70, fontSize: 13),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.18),
-                  borderRadius: BorderRadius.circular(12),
+                  color: Colors.black.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Text(
-                  "Estimated",
-                  style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _IncentiveMetric(label: "Target", value: "₹${NumberFormat('#,##,###').format(target.round())}"),
+                    _IncentiveMetric(label: "Achievement", value: "${achPercent.toStringAsFixed(1)}%"),
+                    _IncentiveMetric(label: "Incentive Rate", value: "${slabRate.toStringAsFixed(1)}%"),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => IncentiveBreakdownModal.show(context, repository),
+                  icon: const Icon(Icons.analytics_outlined, size: 16, color: Colors.white),
+                  label: const Text("View Calculation Breakdown", style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.white38),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          const Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(
-                "₹8,450",
-                style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(width: 8),
-              Text(
-                "August 2026",
-                style: TextStyle(color: Colors.white70, fontSize: 13),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _IncentiveMetric(label: "Target", value: "₹2,00,000"),
-                _IncentiveMetric(label: "Achievement", value: "82%"),
-                _IncentiveMetric(label: "Incentive Rate", value: "3.0%"),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () => IncentiveBreakdownModal.show(context, repository),
-              icon: const Icon(Icons.analytics_outlined, size: 16, color: Colors.white),
-              label: const Text("View Calculation Breakdown", style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Colors.white38),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   Widget _buildKpiGrid(BuildContext context) {
     return StreamBuilder<MRProfile?>(
       stream: repository.getMRProfile(),
-      builder: (context, snapshot) {
-        final profile = snapshot.data;
-        final visitsDone = profile?.completedVisitsToday ?? 12;
+      builder: (context, profileSnapshot) {
+        final profile = profileSnapshot.data;
+        final visitsDone = profile?.completedVisitsToday ?? 0;
         final targetVisits = profile?.targetVisitsToday ?? 15;
-        final sales = profile?.monthlySales ?? 164000.0;
-        final target = profile?.monthlyTarget ?? 200000.0;
+        final sales = profile?.monthlySales ?? 0.0;
+        final target = profile?.monthlyTarget ?? (repository.currentUser?.monthlyTarget ?? 200000.0);
         final achPercent = target > 0 ? ((sales / target) * 100).toInt() : 0;
+        final visitPercent = targetVisits > 0 ? ((visitsDone / targetVisits) * 100).toInt() : 0;
 
-        return GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 1.5,
-          children: [
-            _KpiCard(
-              title: "Calls Today",
-              value: "$visitsDone / $targetVisits",
-              subtitle: "${((visitsDone / targetVisits) * 100).toInt()}% Done",
-              icon: Icons.person_pin_circle_outlined,
-              color: CareOsisColors.medicalEmeraldPrimary,
-              onTap: () => context.push('/visits'),
-            ),
-            _KpiCard(
-              title: "MTD Sales",
-              value: "₹${NumberFormat('#,##,###').format(sales)}",
-              subtitle: "$achPercent% of ₹${(target / 100000).toStringAsFixed(1)}L",
-              icon: Icons.trending_up,
-              color: const Color(0xFF00875A),
-              onTap: () => context.push('/performance'),
-            ),
-            _KpiCard(
-              title: "Orders Booked",
-              value: "6 Orders",
-              subtitle: "₹42,500 Total",
-              icon: Icons.shopping_bag_outlined,
-              color: const Color(0xFF0052CC),
-              onTap: () => context.push('/orders'),
-            ),
-            _KpiCard(
-              title: "Academy Mastery",
-              value: "78%",
-              subtitle: "Expert MR Tier",
-              icon: Icons.school_outlined,
-              color: CareOsisColors.medicalTertiary,
-              onTap: () => context.push('/academy'),
-            ),
-          ],
+        return StreamBuilder<List<OrderModel>>(
+          stream: repository.getAllOrders(),
+          builder: (context, ordersSnapshot) {
+            final orders = ordersSnapshot.data ?? [];
+            final orderCount = orders.length;
+            final orderTotal = orders.fold<double>(0.0, (acc, o) => acc + o.totalAmount);
+
+            return GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 1.5,
+              children: [
+                _KpiCard(
+                  title: "Calls Today",
+                  value: "$visitsDone / $targetVisits",
+                  subtitle: "$visitPercent% Done",
+                  icon: Icons.person_pin_circle_outlined,
+                  color: CareOsisColors.medicalEmeraldPrimary,
+                  onTap: () => context.push('/visits'),
+                ),
+                _KpiCard(
+                  title: "MTD Sales",
+                  value: "₹${NumberFormat('#,##,###').format(sales.round())}",
+                  subtitle: "$achPercent% of ₹${(target / 100000).toStringAsFixed(1)}L",
+                  icon: Icons.trending_up,
+                  color: const Color(0xFF00875A),
+                  onTap: () => context.push('/performance'),
+                ),
+                _KpiCard(
+                  title: "Orders Booked",
+                  value: "$orderCount ${orderCount == 1 ? 'Order' : 'Orders'}",
+                  subtitle: "₹${NumberFormat('#,##,###').format(orderTotal.round())} Total",
+                  icon: Icons.shopping_bag_outlined,
+                  color: const Color(0xFF0052CC),
+                  onTap: () => context.push('/orders'),
+                ),
+                _KpiCard(
+                  title: "Academy Mastery",
+                  value: "${profile?.trainingProgressPercent ?? 0}%",
+                  subtitle: profile?.trainingProgressPercent != null && profile!.trainingProgressPercent > 50
+                      ? "Advanced MR Tier"
+                      : "Enrolled",
+                  icon: Icons.school_outlined,
+                  color: CareOsisColors.medicalTertiary,
+                  onTap: () => context.push('/academy'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
   }
 
   Widget _buildRouteCta(BuildContext context) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: Color(0xFFE2E8F0)),
-      ),
-      child: ListTile(
-        leading: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: CareOsisColors.medicalEmeraldPrimary.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
+    return StreamBuilder<List<RoutePlanModel>>(
+      stream: repository.getAllRoutes(),
+      builder: (context, snapshot) {
+        final routes = snapshot.data ?? [];
+        final hasRoute = routes.isNotEmpty;
+        final firstRoute = hasRoute ? routes.first : null;
+
+        return Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: Color(0xFFE2E8F0)),
           ),
-          child: const Icon(Icons.navigation_outlined, color: CareOsisColors.medicalEmeraldPrimary),
-        ),
-        title: const Text("Today's Field Beat Route", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-        subtitle: const Text("Shalimar Bagh & Rohini Beat (6 Doctors, 4 Chemists)", style: TextStyle(fontSize: 12)),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => context.push('/routes'),
-      ),
+          child: ListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: CareOsisColors.medicalEmeraldPrimary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.navigation_outlined, color: CareOsisColors.medicalEmeraldPrimary),
+            ),
+            title: const Text("Today's Field Beat Route", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            subtitle: Text(
+              hasRoute
+                  ? "${firstRoute!.title} (${firstRoute.stopsListText})"
+                  : "No active beat route scheduled today. Tap to plan.",
+              style: const TextStyle(fontSize: 12),
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/routes'),
+          ),
+        );
+      },
     );
   }
 

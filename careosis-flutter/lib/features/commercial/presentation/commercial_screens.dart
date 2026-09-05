@@ -35,18 +35,28 @@ class OrderListScreen extends StatelessWidget {
           final orders = snapshot.data ?? [];
           if (orders.isEmpty) {
             return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.shopping_cart_outlined, size: 64, color: Colors.black26),
-                  const SizedBox(height: 12),
-                  const Text("No commercial orders booked yet"),
-                  const SizedBox(height: 12),
-                  ElevatedButton(
-                    onPressed: () => context.push('/orders/create'),
-                    child: const Text("Book First POB Order"),
-                  ),
-                ],
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const CareOsisEmptyState(
+                      title: "No Commercial Orders Booked",
+                      message: "No retailer chemist or stockist orders logged yet for this cycle.",
+                      icon: Icons.shopping_cart_outlined,
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: () => context.push('/orders/create'),
+                      icon: const Icon(Icons.add_shopping_cart, color: Colors.white),
+                      label: const Text("Book First POB Order", style: TextStyle(color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: CareOsisColors.medicalEmeraldPrimary,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             );
           }
@@ -89,9 +99,9 @@ class CreateOrderScreen extends StatefulWidget {
 
 class _CreateOrderScreenState extends State<CreateOrderScreen> {
   String _customerType = "RETAILER";
-  String _customerName = "Apollo MedPlus Chemist";
-  int _boosterQty = 10;
-  int _calciFizzQty = 5;
+  String _customerName = "";
+  int _boosterQty = 0;
+  int _calciFizzQty = 0;
   double _discountPercent = 0.0;
 
   @override
@@ -119,8 +129,11 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             ),
             const SizedBox(height: 12),
             TextField(
-              decoration: const InputDecoration(labelText: "Account Name", border: OutlineInputBorder()),
-              controller: TextEditingController(text: _customerName),
+              decoration: const InputDecoration(
+                labelText: "Account / Chemist Name",
+                hintText: "Enter retailer chemist or stockist name",
+                border: OutlineInputBorder(),
+              ),
               onChanged: (v) => _customerName = v,
             ),
             const SizedBox(height: 16),
@@ -148,13 +161,25 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () async {
+                if (_customerName.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Please enter Account / Chemist Name")),
+                  );
+                  return;
+                }
+                if (_boosterQty <= 0 && _calciFizzQty <= 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Please select at least 1 product quantity")),
+                  );
+                  return;
+                }
                 final orderId = "ORD-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}";
                 final order = OrderModel(
                   id: orderId,
-                  customerId: "RET-001",
-                  customerName: _customerName,
+                  customerId: "CUST-${DateTime.now().millisecondsSinceEpoch % 1000}",
+                  customerName: _customerName.trim(),
                   customerType: _customerType,
-                  mrId: widget.repository.currentUser?.id ?? "CO-MR-8492",
+                  mrId: widget.repository.currentUser?.id ?? "MR",
                   orderDate: DateFormat("dd MMM yyyy").format(DateTime.now()),
                   subtotal: calc.subtotal,
                   discountPercent: _discountPercent,
@@ -234,7 +259,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       final acc = pos != null ? "${pos.accuracy.toStringAsFixed(0)}m" : "Estimated";
       final locationStr = "GPS: ${lat.toStringAsFixed(4)}° N, ${lng.toStringAsFixed(4)}° E (±$acc)";
 
-      final empId = profile?.empId ?? widget.repository.currentUser?.id ?? "CO-MR-8492";
+      final empId = profile?.empId ?? widget.repository.currentUser?.id ?? "MR";
       await widget.repository.checkInMR(
         empId: empId,
         locationName: locationStr,
@@ -309,7 +334,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       final acc = pos != null ? "${pos.accuracy.toStringAsFixed(0)}m" : "Estimated";
       final locationStr = "GPS: ${lat.toStringAsFixed(4)}° N, ${lng.toStringAsFixed(4)}° E (±$acc)";
 
-      final empId = profile?.empId ?? widget.repository.currentUser?.id ?? "CO-MR-8492";
+      final empId = profile?.empId ?? widget.repository.currentUser?.id ?? "MR";
       final updated = await widget.repository.checkOutMR(
         empId: empId,
         locationName: locationStr,
@@ -715,6 +740,15 @@ class RoutePlanScreen extends StatelessWidget {
         stream: repository.getAllRoutes(),
         builder: (context, snapshot) {
           final routes = snapshot.data ?? [];
+          if (routes.isEmpty) {
+            return const Center(
+              child: CareOsisEmptyState(
+                title: "No Beat Routes Scheduled",
+                message: "No beat plans assigned for today. Contact regional admin or plan a route.",
+                icon: Icons.alt_route_outlined,
+              ),
+            );
+          }
           return ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: routes.length,
@@ -759,6 +793,15 @@ class FollowUpScreen extends StatelessWidget {
         stream: repository.getAllFollowUps(),
         builder: (context, snapshot) {
           final list = snapshot.data ?? [];
+          if (list.isEmpty) {
+            return const Center(
+              child: CareOsisEmptyState(
+                title: "No Follow-Ups Pending",
+                message: "All prescriber detailing action items and commitments are complete.",
+                icon: Icons.task_alt_outlined,
+              ),
+            );
+          }
           return ListView.builder(
             padding: const EdgeInsets.all(12),
             itemCount: list.length,

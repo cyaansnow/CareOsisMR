@@ -13,32 +13,40 @@ import '../../core/services/approval_service.dart';
 import '../../core/engine/rule_engine.dart';
 import '../../core/services/location_tracking_service.dart';
 import '../../core/services/supabase_sync_service.dart';
+import '../../core/services/auth_service.dart';
 
 class CareOsisRepository {
   final CareOsisDatabase _database;
   late final AuditService auditService;
   late final ApprovalService approvalService;
+  late final AuthService authService;
 
   CareOsisRepository(this._database) {
     auditService = AuditService(_database);
     approvalService = ApprovalService(_database, auditService);
-    seedDatabaseIfEmpty();
+    authService = AuthService(_database);
+    restoreSession();
   }
 
   UserAccount? _currentUser;
   final _currentUserController = StreamController<UserAccount?>.broadcast();
   Stream<UserAccount?> get currentUserStream => _currentUserController.stream;
   UserAccount? get currentUser => _currentUser;
+  CareOsisDatabase get database => _database;
 
+  /// Restores saved user session on startup
+  Future<void> restoreSession() async {
+    final user = await authService.restoreSession();
+    if (user != null) {
+      _currentUser = user;
+      _currentUserController.add(user);
+    }
+  }
+
+  /// Optional test-only helper to seed isolated mock data if explicitly requested in unit tests
   Future<void> seedDatabaseIfEmpty() async {
     final currentProfile = _database.mrProfileDao.getProfileSync();
     if (currentProfile == null) {
-      await _database.mrProfileDao.insertProfile(SeedDataProvider.getDefaultProfile());
-      await _database.productDao.insertProducts(SeedDataProvider.getInitialProducts());
-      await _database.doctorDao.insertAll(SeedDataProvider.getInitialDoctors());
-      await _database.commercialDao.insertStockists(SeedDataProvider.getInitialStockists());
-      await _database.commercialDao.insertRetailers(SeedDataProvider.getInitialRetailers());
-      await _database.commercialDao.insertRoutes(SeedDataProvider.getInitialRoutes());
       await _database.adminAndSecurityDao.insertUsers(SeedDataProvider.getInitialUserAccounts());
       await _database.adminAndSecurityDao.insertRegions(SeedDataProvider.getInitialRegions());
       await _database.adminAndSecurityDao.insertTerritories(SeedDataProvider.getInitialTerritories());
@@ -46,40 +54,46 @@ class CareOsisRepository {
       await _database.adminAndSecurityDao.insertGeneralizedRules(SeedDataProvider.getInitialGeneralizedRules());
       await _database.adminAndSecurityDao.insertIncentiveRules(SeedDataProvider.getInitialIncentiveRules());
       await _database.adminAndSecurityDao.insertApprovalRequests(SeedDataProvider.getInitialApprovalRequests());
-
-      for (final l in SeedDataProvider.getInitialAuditLogs()) {
-        await _database.adminAndSecurityDao.insertAuditLog(l);
-      }
-
-      for (final f in SeedDataProvider.getInitialFollowUps()) {
-        await _database.commercialDao.insertFollowUp(f);
-      }
-
-      _currentUser = _database.adminAndSecurityDao.getUserById("CO-MR-8492");
-      _currentUserController.add(_currentUser);
-    } else {
-      if (_database.regions.isEmpty) {
-        await _database.adminAndSecurityDao.insertRegions(SeedDataProvider.getInitialRegions());
-        await _database.adminAndSecurityDao.insertTerritories(SeedDataProvider.getInitialTerritories());
-        await _database.adminAndSecurityDao.insertAdminScopes(SeedDataProvider.getInitialAdminScopes());
-        await _database.adminAndSecurityDao.insertGeneralizedRules(SeedDataProvider.getInitialGeneralizedRules());
-        await _database.adminAndSecurityDao.insertApprovalRequests(SeedDataProvider.getInitialApprovalRequests());
-      }
-      if (_currentUser == null) {
-        _currentUser = _database.adminAndSecurityDao.getUserById("CO-MR-8492");
-        _currentUserController.add(_currentUser);
-      }
     }
   }
 
   // Authentication & Session
   Future<UserAccount?> authenticate(String id, String password) async {
-    final user = _database.adminAndSecurityDao.authenticateUser(id.trim(), password.trim());
+    final user = await authService.signIn(id, password);
     if (user != null) {
       _currentUser = user;
       _currentUserController.add(user);
     }
     return user;
+  }
+
+  Future<UserAccount?> register({
+    required String email,
+    required String password,
+    required String fullName,
+    required String hqTerritory,
+    String phone = "",
+    String role = "EMPLOYEE",
+  }) async {
+    final user = await authService.signUp(
+      email: email,
+      password: password,
+      fullName: fullName,
+      hqTerritory: hqTerritory,
+      phone: phone,
+      role: role,
+    );
+    if (user != null) {
+      _currentUser = user;
+      _currentUserController.add(user);
+    }
+    return user;
+  }
+
+  Future<void> logout() async {
+    await authService.signOut();
+    _currentUser = null;
+    _currentUserController.add(null);
   }
 
   void setCurrentUser(UserAccount? user) {
@@ -226,7 +240,7 @@ class CareOsisRepository {
   Stream<List<DoctorVisit>> getVisitsForDoctor(String doctorId) => _database.doctorVisitDao.getVisitsForDoctor(doctorId);
   Future<void> recordVisit(DoctorVisit visit) async {
     await _database.doctorVisitDao.insertVisit(visit);
-    final mrId = _currentUser?.id ?? _database.mrProfiles.values.firstOrNull?.empId ?? "CO-MR-8492";
+    final mrId = _currentUser?.id ?? _database.mrProfiles.values.firstOrNull?.empId ?? "MR";
     await _database.mrProfileDao.incrementCompletedVisits(mrId);
     await _database.platformDao.enqueueSync(
       SyncQueueModel(
@@ -298,7 +312,7 @@ class CareOsisRepository {
   Stream<ExpenseModel?> getExpenseById(String id) => _database.commercialDao.getExpenseById(id);
   Future<void> createExpense(ExpenseModel expense) async {
     await _database.commercialDao.insertExpense(expense);
-    final mrId = _currentUser?.id ?? _database.mrProfiles.values.firstOrNull?.empId ?? "CO-MR-8492";
+    final mrId = _currentUser?.id ?? _database.mrProfiles.values.firstOrNull?.empId ?? "MR";
     await _database.platformDao.enqueueSync(
       SyncQueueModel(
         entityType: "EXPENSE",

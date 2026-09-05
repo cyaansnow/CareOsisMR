@@ -36,13 +36,13 @@ class ProfileScreen extends StatelessWidget {
                           radius: 36,
                           backgroundColor: CareOsisColors.medicalEmeraldPrimary,
                           child: Text(
-                            (p?.name ?? "MR").substring(0, 1),
+                            ((user?.name ?? p?.name ?? "MR").isNotEmpty ? (user?.name ?? p?.name ?? "MR")[0] : "M").toUpperCase(),
                             style: const TextStyle(fontSize: 28, color: Colors.white, fontWeight: FontWeight.bold),
                           ),
                         ),
                         const SizedBox(height: 12),
-                        Text(p?.name ?? "Aman Chhabra", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                        Text(p?.designation ?? "Senior Medical Representative", style: const TextStyle(fontSize: 13, color: Colors.black54)),
+                        Text(user?.name ?? p?.name ?? "Field Representative", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        Text(user?.designation ?? p?.designation ?? "Medical Representative", style: const TextStyle(fontSize: 13, color: Colors.black54)),
                         const SizedBox(height: 6),
                         CareOsisStatusChip(label: user?.role ?? "EMPLOYEE"),
                       ],
@@ -60,9 +60,11 @@ class ProfileScreen extends StatelessWidget {
                   _buildMenuItem(Icons.security_outlined, "Super Admin Master Hub", () => context.push('/super-admin')),
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
-                  onPressed: () {
-                    repository.setCurrentUser(null);
-                    context.go('/login');
+                  onPressed: () async {
+                    await repository.logout();
+                    if (context.mounted) {
+                      context.go('/login');
+                    }
                   },
                   icon: const Icon(Icons.logout, color: Colors.red),
                   label: const Text("Sign Out", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),

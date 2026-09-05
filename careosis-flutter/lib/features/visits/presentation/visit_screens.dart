@@ -414,8 +414,8 @@ class _StartVisitScreenState extends State<StartVisitScreen> {
                         entityId: visitId,
                         title: "Visit Exception: ${doc?.name ?? 'Doctor Call'}",
                         details: eval.reason,
-                        submittedBy: user?.id ?? "CO-MR-8492",
-                        submittedByName: user?.name ?? "Aman Chhabra",
+                        submittedBy: user?.id ?? "MR",
+                        submittedByName: user?.name ?? "Field Representative",
                         scope: user?.assignedRegionIds ?? "REG-001",
                         sla: "24h",
                       );

@@ -313,8 +313,8 @@ class _LogExpenseFormScreenState extends State<LogExpenseFormScreen> {
                   entityId: expenseId,
                   title: "$_category Claim ₹${amount.toStringAsFixed(0)}",
                   details: "${_descController.text.trim()} (Receipt: ${_hasReceipt ? 'Yes' : 'No'})",
-                  submittedBy: user?.id ?? "CO-MR-8492",
-                  submittedByName: user?.name ?? "Aman Chhabra",
+                  submittedBy: user?.id ?? "MR",
+                  submittedByName: user?.name ?? "Field Representative",
                   scope: user?.assignedRegionIds ?? "REG-001",
                   sla: "48h",
                 );

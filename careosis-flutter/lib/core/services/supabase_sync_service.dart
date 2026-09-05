@@ -62,7 +62,7 @@ class SupabaseSyncService {
     try {
       final payload = {
         'id': attendance.id,
-        'mr_id': mrId ?? 'CO-MR-8492',
+        'mr_id': mrId ?? 'MR',
         'date': attendance.date,
         'check_in_time': attendance.checkInTime,
         'check_in_lat': attendance.checkInLatitude,
@@ -95,7 +95,7 @@ class SupabaseSyncService {
     try {
       final payload = {
         'id': visit.id,
-        'mr_id': mrId ?? 'CO-MR-8492',
+        'mr_id': mrId ?? 'MR',
         'doctor_id': visit.doctorId,
         'doctor_name': visit.doctorName,
         'clinic_name': visit.clinicName,
@@ -158,7 +158,7 @@ class SupabaseSyncService {
     try {
       final payload = {
         'id': expense.id,
-        'mr_id': mrId ?? 'CO-MR-8492',
+        'mr_id': mrId ?? 'MR',
         'expense_date': expense.date,
         'category': expense.category,
         'amount': expense.amount,

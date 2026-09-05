@@ -12,107 +12,95 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _idController = TextEditingController(text: "CO-MR-8492");
-  final _passwordController = TextEditingController(text: "Password@123");
+  bool _isRegisterMode = false;
+
+  // Controllers - Initialized completely empty (Zero Mock Defaults)
+  final _idController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _nameController = TextEditingController();
+  final _territoryController = TextEditingController();
+  final _phoneController = TextEditingController();
+
   bool _obscurePassword = true;
   bool _isLoading = false;
   String? _errorMessage;
-  int _logoTapCount = 0;
 
-  void _handleLogoTap() {
-    _logoTapCount++;
-    if (_logoTapCount >= 5) {
-      _logoTapCount = 0;
-      _showHiddenSuperAdminModal();
+  @override
+  void dispose() {
+    _idController.dispose();
+    _passwordController.dispose();
+    _nameController.dispose();
+    _territoryController.dispose();
+    _phoneController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _performAuth() async {
+    final identifier = _idController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (identifier.isEmpty || password.isEmpty) {
+      setState(() => _errorMessage = "Please enter your Email/ID and Password.");
+      return;
     }
-  }
 
-  void _showHiddenSuperAdminModal() {
-    final saIdController = TextEditingController(text: "CO-SA-001");
-    final saPassController = TextEditingController(text: "SuperAdmin@2026");
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.security, color: CareOsisColors.medicalEmeraldPrimary),
-            SizedBox(width: 8),
-            Text("Executive Master Console", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "Global enterprise administrative clearance required.",
-              style: TextStyle(fontSize: 12, color: Colors.black54),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: saIdController,
-              decoration: const InputDecoration(labelText: "Super Admin ID", border: OutlineInputBorder()),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: saPassController,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: "Master Key", border: OutlineInputBorder()),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text("Cancel"),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              setState(() => _isLoading = true);
-              final user = await widget.repository.authenticate(
-                saIdController.text.trim(),
-                saPassController.text.trim(),
-              );
-              setState(() => _isLoading = false);
-              if (user != null && user.role == "SUPER_ADMIN") {
-                if (mounted) context.go('/super-admin');
-              } else {
-                setState(() => _errorMessage = "Invalid Super Admin credentials");
-              }
-            },
-            child: const Text("Authorize Entry"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _performLogin() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
-    final user = await widget.repository.authenticate(
-      _idController.text.trim(),
-      _passwordController.text.trim(),
-    );
+    try {
+      if (_isRegisterMode) {
+        final name = _nameController.text.trim();
+        final territory = _territoryController.text.trim();
+        final phone = _phoneController.text.trim();
 
-    setState(() => _isLoading = false);
+        if (name.isEmpty) {
+          setState(() {
+            _isLoading = false;
+            _errorMessage = "Please enter your full name.";
+          });
+          return;
+        }
 
-    if (user != null) {
-      if (!mounted) return;
-      if (user.role == "SUPER_ADMIN") {
-        context.go('/super-admin');
-      } else if (user.role == "ADMIN") {
-        context.go('/admin/dashboard');
+        final newUser = await widget.repository.register(
+          email: identifier,
+          password: password,
+          fullName: name,
+          hqTerritory: territory.isNotEmpty ? territory : "Field Territory",
+          phone: phone,
+        );
+
+        setState(() => _isLoading = false);
+
+        if (newUser != null) {
+          if (!mounted) return;
+          context.go('/home');
+        } else {
+          setState(() => _errorMessage = "Registration failed. Please verify your details.");
+        }
       } else {
-        context.go('/home');
+        final user = await widget.repository.authenticate(identifier, password);
+        setState(() => _isLoading = false);
+
+        if (user != null) {
+          if (!mounted) return;
+          if (user.role == "SUPER_ADMIN") {
+            context.go('/super-admin');
+          } else if (user.role == "ADMIN") {
+            context.go('/admin/dashboard');
+          } else {
+            context.go('/home');
+          }
+        } else {
+          setState(() => _errorMessage = "Invalid credentials. Please verify ID/Email and password.");
+        }
       }
-    } else {
-      setState(() => _errorMessage = "Invalid ID or Password. Please try again.");
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = "Authentication error: $e";
+      });
     }
   }
 
@@ -128,39 +116,105 @@ class _LoginScreenState extends State<LoginScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                GestureDetector(
-                  onTap: _handleLogoTap,
-                  child: Container(
-                    width: 76,
-                    height: 76,
-                    decoration: BoxDecoration(
-                      color: CareOsisColors.medicalEmeraldPrimary,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: CareOsisColors.medicalEmeraldPrimary.withOpacity(0.3),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(Icons.local_hospital_rounded, color: Colors.white, size: 42),
+                // Brand Header
+                Container(
+                  width: 72,
+                  height: 72,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: CareOsisColors.medicalEmeraldPrimary,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: CareOsisColors.medicalEmeraldPrimary.withOpacity(0.25),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
+                  child: const Icon(Icons.local_hospital_rounded, color: Colors.white, size: 40),
                 ),
-                const SizedBox(height: 16),
                 const Text(
                   "CareOsis MR",
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: CareOsisColors.medicalEmeraldPrimary),
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    color: CareOsisColors.medicalEmeraldPrimary,
+                  ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  "Enterprise Field Force Operating System",
+                Text(
+                  _isRegisterMode
+                      ? "Create Medical Representative Account"
+                      : "Enterprise Field Force Authentication",
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 13, color: Colors.black54),
+                  style: const TextStyle(fontSize: 13, color: Colors.black54),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 28),
 
+                // Tab Selector (Sign In vs Register)
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() {
+                            _isRegisterMode = false;
+                            _errorMessage = null;
+                          }),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color: !_isRegisterMode ? CareOsisColors.medicalEmeraldPrimary : Colors.transparent,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              "Sign In",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: !_isRegisterMode ? Colors.white : Colors.black54,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() {
+                            _isRegisterMode = true;
+                            _errorMessage = null;
+                          }),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color: _isRegisterMode ? CareOsisColors.medicalEmeraldPrimary : Colors.transparent,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              "Register",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: _isRegisterMode ? Colors.white : Colors.black54,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Error Banner
                 if (_errorMessage != null)
                   Container(
                     margin: const EdgeInsets.only(bottom: 16),
@@ -181,20 +235,59 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
 
+                // Registration specific fields
+                if (_isRegisterMode) ...[
+                  TextField(
+                    controller: _nameController,
+                    decoration: InputDecoration(
+                      labelText: "Full Name",
+                      hintText: "e.g. Rahul Sharma",
+                      prefixIcon: const Icon(Icons.person_outline),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: _territoryController,
+                    decoration: InputDecoration(
+                      labelText: "HQ / Territory",
+                      hintText: "e.g. South Delhi & Saket",
+                      prefixIcon: const Icon(Icons.location_city_outlined),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: _phoneController,
+                    keyboardType: TextInputType.phone,
+                    decoration: InputDecoration(
+                      labelText: "Mobile Phone (Optional)",
+                      hintText: "+91 9876543210",
+                      prefixIcon: const Icon(Icons.phone_outlined),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
+
+                // Common fields: Identifier & Password
                 TextField(
                   controller: _idController,
+                  keyboardType: _isRegisterMode ? TextInputType.emailAddress : TextInputType.text,
                   decoration: InputDecoration(
-                    labelText: "Employee / Admin ID",
+                    labelText: _isRegisterMode ? "Email Address" : "Employee ID or Email",
+                    hintText: _isRegisterMode ? "you@pharma.com" : "Enter your ID or registered email",
                     prefixIcon: const Icon(Icons.badge_outlined),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 TextField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
                   decoration: InputDecoration(
                     labelText: "Password",
+                    hintText: "Enter secure password",
                     prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
@@ -204,44 +297,34 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
+
+                // Submit Button
                 ElevatedButton(
-                  onPressed: _isLoading ? null : _performLogin,
+                  onPressed: _isLoading ? null : _performAuth,
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     backgroundColor: CareOsisColors.medicalEmeraldPrimary,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   child: _isLoading
-                      ? const SizedBox(height: 20, width: 20, child: CircularProgress32(strokeWidth: 2, color: Colors.white))
-                      : const Text("Sign In", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : Text(
+                          _isRegisterMode ? "Create Account & Sign In" : "Sign In",
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
                 ),
-                const SizedBox(height: 24),
-                const Divider(),
-                const SizedBox(height: 12),
-                const Text(
-                  "Demo Quick Fill:",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12, color: Colors.black45, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    OutlinedButton(
-                      onPressed: () {
-                        _idController.text = "CO-MR-8492";
-                        _passwordController.text = "Password@123";
-                      },
-                      child: const Text("Field MR"),
-                    ),
-                    OutlinedButton(
-                      onPressed: () {
-                        _idController.text = "CO-ADM-101";
-                        _passwordController.text = "Admin@123";
-                      },
-                      child: const Text("Admin"),
-                    ),
-                  ],
+                const SizedBox(height: 16),
+
+                // Live Cloud Indicator
+                const Center(
+                  child: Text(
+                    "Connected to Supabase PostgreSQL & Offline Storage",
+                    style: TextStyle(fontSize: 11, color: Colors.black38),
+                  ),
                 ),
               ],
             ),
@@ -249,16 +332,5 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
     );
-  }
-}
-
-class CircularProgress32 extends StatelessWidget {
-  final double strokeWidth;
-  final Color color;
-  const CircularProgress32({super.key, required this.strokeWidth, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return CircularProgressIndicator(strokeWidth: strokeWidth, valueColor: AlwaysStoppedAnimation(color));
   }
 }
