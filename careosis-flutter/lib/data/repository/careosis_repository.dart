@@ -12,6 +12,7 @@ import '../../core/services/audit_service.dart';
 import '../../core/services/approval_service.dart';
 import '../../core/engine/rule_engine.dart';
 import '../../core/services/location_tracking_service.dart';
+import '../../core/services/supabase_sync_service.dart';
 
 class CareOsisRepository {
   final CareOsisDatabase _database;
@@ -371,6 +372,9 @@ class CareOsisRepository {
       ),
     );
 
+    // Push to Supabase Cloud
+    SupabaseSyncService.instance.syncAttendanceRecord(att, mrId: empId);
+
     return att;
   }
 
@@ -432,6 +436,9 @@ class CareOsisRepository {
         createdAt: now.millisecondsSinceEpoch,
       ),
     );
+
+    // Push to Supabase Cloud
+    SupabaseSyncService.instance.syncAttendanceRecord(updated, mrId: empId);
 
     return updated;
   }

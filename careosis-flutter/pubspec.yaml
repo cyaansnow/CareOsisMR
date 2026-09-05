@@ -37,6 +37,10 @@ dependencies:
   geolocator: ^12.0.0
   image_picker: ^1.1.2
 
+  # Supabase Cloud Backend
+  supabase_flutter: ^2.6.0
+  flutter_dotenv: ^5.1.0
+
   # Firebase Cloud Backend
   firebase_core: ^3.1.0
   firebase_auth: ^5.1.0
@@ -51,3 +55,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - .env
+
