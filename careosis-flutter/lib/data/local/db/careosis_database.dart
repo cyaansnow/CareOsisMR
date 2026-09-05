@@ -99,6 +99,16 @@ class CareOsisDatabase {
     yield* _attendanceController.stream;
   }
 
+  Stream<List<Doctor>> get doctorsStream async* {
+    yield doctors.values.toList()..sort((a, b) => b.priority.compareTo(a.priority));
+    yield* _doctorsController.stream;
+  }
+
+  Stream<List<DoctorVisit>> get visitsStream async* {
+    yield doctorVisits.values.toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    yield* _visitsController.stream;
+  }
+
   void notifyProfile() => _profileController.add(mrProfiles.values.firstOrNull);
   void notifyDoctors() => _doctorsController.add(doctors.values.toList()..sort((a, b) => b.priority.compareTo(a.priority)));
   void notifyVisits() => _visitsController.add(doctorVisits.values.toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt)));

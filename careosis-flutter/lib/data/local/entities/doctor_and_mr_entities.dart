@@ -1,4 +1,4 @@
-﻿class MRProfile {
+class MRProfile {
   final String empId;
   final String name;
   final String phone;
@@ -100,6 +100,8 @@ class Doctor {
   final String lastVisitDate;
   final String nextFollowUpDate;
   final String productsDiscussed;
+  final double latitude;
+  final double longitude;
   final bool isSynced;
 
   const Doctor({
@@ -120,6 +122,8 @@ class Doctor {
     this.lastVisitDate = "",
     this.nextFollowUpDate = "",
     this.productsDiscussed = "",
+    this.latitude = 0.0,
+    this.longitude = 0.0,
     this.isSynced = true,
   });
 
@@ -141,6 +145,8 @@ class Doctor {
         'lastVisitDate': lastVisitDate,
         'nextFollowUpDate': nextFollowUpDate,
         'productsDiscussed': productsDiscussed,
+        'latitude': latitude,
+        'longitude': longitude,
         'isSynced': isSynced ? 1 : 0,
       };
 
@@ -162,6 +168,8 @@ class Doctor {
         lastVisitDate: map['lastVisitDate'] as String? ?? "",
         nextFollowUpDate: map['nextFollowUpDate'] as String? ?? "",
         productsDiscussed: map['productsDiscussed'] as String? ?? "",
+        latitude: (map['latitude'] as num?)?.toDouble() ?? 0.0,
+        longitude: (map['longitude'] as num?)?.toDouble() ?? 0.0,
         isSynced: map['isSynced'] == 1 || map['isSynced'] == true,
       );
 }

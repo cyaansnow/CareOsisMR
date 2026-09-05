@@ -226,9 +226,8 @@ class CareOsisRepository {
   Stream<List<DoctorVisit>> getVisitsForDoctor(String doctorId) => _database.doctorVisitDao.getVisitsForDoctor(doctorId);
   Future<void> recordVisit(DoctorVisit visit) async {
     await _database.doctorVisitDao.insertVisit(visit);
-    if (_currentUser != null) {
-      await _database.mrProfileDao.incrementCompletedVisits(_currentUser!.id);
-    }
+    final mrId = _currentUser?.id ?? _database.mrProfiles.values.firstOrNull?.empId ?? "CO-MR-8492";
+    await _database.mrProfileDao.incrementCompletedVisits(mrId);
     await _database.platformDao.enqueueSync(
       SyncQueueModel(
         entityType: "DOCTOR_VISIT",
@@ -238,6 +237,8 @@ class CareOsisRepository {
         createdAt: DateTime.now().millisecondsSinceEpoch,
       ),
     );
+    // Push visit to Supabase Cloud
+    SupabaseSyncService.instance.syncDoctorVisit(visit, mrId: mrId);
   }
 
   // Products & Academy

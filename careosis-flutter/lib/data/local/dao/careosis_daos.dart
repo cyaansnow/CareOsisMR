@@ -87,11 +87,11 @@ class DoctorDao {
   DoctorDao(this._db);
 
   Stream<List<Doctor>> getAllDoctors() {
-    return Stream.value(_db.doctors.values.toList()..sort((a, b) => b.priority.compareTo(a.priority)));
+    return _db.doctorsStream;
   }
 
   Stream<Doctor?> getDoctorById(String id) {
-    return Stream.value(_db.doctors[id]);
+    return _db.doctorsStream.map((list) => _db.doctors[id]);
   }
 
   Doctor? getDoctorByIdSync(String id) {
@@ -100,12 +100,11 @@ class DoctorDao {
 
   Stream<List<Doctor>> searchDoctors(String query) {
     final q = query.toLowerCase();
-    final results = _db.doctors.values.where((d) =>
+    return _db.doctorsStream.map((list) => list.where((d) =>
       d.name.toLowerCase().contains(q) ||
       d.specialty.toLowerCase().contains(q) ||
       d.clinicHospital.toLowerCase().contains(q)
-    ).toList();
-    return Stream.value(results);
+    ).toList());
   }
 
   Future<void> insertDoctor(Doctor doctor) async {
@@ -131,19 +130,15 @@ class DoctorVisitDao {
   DoctorVisitDao(this._db);
 
   Stream<List<DoctorVisit>> getAllVisits() {
-    return Stream.value(_db.doctorVisits.values.toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt)));
+    return _db.visitsStream;
   }
 
   Stream<List<DoctorVisit>> getVisitsForDoctor(String doctorId) {
-    final visits = _db.doctorVisits.values.where((v) => v.doctorId == doctorId).toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    return Stream.value(visits);
+    return _db.visitsStream.map((list) => list.where((v) => v.doctorId == doctorId).toList());
   }
 
   Stream<List<DoctorVisit>> getVisitsForDate(String date) {
-    final visits = _db.doctorVisits.values.where((v) => v.visitDate == date).toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    return Stream.value(visits);
+    return _db.visitsStream.map((list) => list.where((v) => v.visitDate == date).toList());
   }
 
   Future<void> insertVisit(DoctorVisit visit) async {

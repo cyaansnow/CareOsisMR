@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/careosis_theme.dart';
 import '../../../core/components/careosis_components.dart';
@@ -89,7 +89,11 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
                 }
 
                 if (doctors.isEmpty) {
-                  return const Center(child: Text("No prescribers matching criteria"));
+                  return const CareOsisEmptyState(
+                    icon: Icons.person_search_outlined,
+                    title: "No Prescribers Found",
+                    subtitle: "No doctors match the selected search criteria or category.",
+                  );
                 }
 
                 return ListView.builder(
@@ -179,6 +183,8 @@ class DoctorDetailScreen extends StatelessWidget {
                         const SizedBox(height: 12),
                         _buildInfoRow(Icons.local_hospital_outlined, doc.clinicHospital),
                         _buildInfoRow(Icons.location_on_outlined, doc.address),
+                        if (doc.latitude != 0.0 && doc.longitude != 0.0)
+                          _buildInfoRow(Icons.pin_drop_outlined, "Clinic GPS: ${doc.latitude.toStringAsFixed(4)}, ${doc.longitude.toStringAsFixed(4)}"),
                         _buildInfoRow(Icons.phone_outlined, doc.phone),
                         _buildInfoRow(Icons.access_time_outlined, doc.preferredVisitingTime),
                       ],
@@ -203,10 +209,12 @@ class DoctorDetailScreen extends StatelessWidget {
                   builder: (context, visitSnapshot) {
                     final visits = visitSnapshot.data ?? [];
                     if (visits.isEmpty) {
-                      return const Card(
-                        child: Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Text("No previous visits recorded for this prescriber.", textAlign: TextAlign.center),
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: CareOsisEmptyState(
+                          icon: Icons.history_outlined,
+                          title: "No Previous Calls",
+                          subtitle: "No field visits recorded for this doctor yet.",
                         ),
                       );
                     }
