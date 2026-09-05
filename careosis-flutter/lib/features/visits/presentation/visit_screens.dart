@@ -130,7 +130,7 @@ class _StartVisitScreenState extends State<StartVisitScreen> {
                               Icons.location_on,
                               color: isAtClinic
                                   ? CareOsisColors.medicalEmeraldPrimary
-                                  : CareOsisColors.primary,
+                                  : Colors.grey.shade500,
                               size: 22,
                             ),
                             const SizedBox(width: 8),
@@ -473,7 +473,7 @@ class VisitHistoryScreen extends StatelessWidget {
             return const CareOsisEmptyState(
               icon: Icons.assignment_outlined,
               title: "No Field Calls Logged",
-              subtitle: "Completed doctor visits and detailing call records will appear here live.",
+              message: "Completed doctor visits and detailing call records will appear here live.",
             );
           }
 
@@ -543,7 +543,7 @@ class VisitHistoryScreen extends StatelessWidget {
                           if (v.latitude != 0.0 && v.longitude != 0.0)
                             Row(
                               children: [
-                                const Icon(Icons.location_on, size: 13, color: CareOsisColors.primary),
+                                const Icon(Icons.location_on, size: 13, color: CareOsisColors.medicalEmeraldPrimary),
                                 const SizedBox(width: 2),
                                 Text(
                                   "${v.latitude.toStringAsFixed(3)}, ${v.longitude.toStringAsFixed(3)}",

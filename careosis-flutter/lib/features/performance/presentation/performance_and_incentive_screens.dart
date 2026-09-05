@@ -23,7 +23,7 @@ class PerformanceScreen extends StatelessWidget {
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: const CareOsisTopBar(title: "Target & Incentive Analytics"),
       body: StreamBuilder<MRProfile?>(
-        stream: repository.getProfile(),
+        stream: repository.getMRProfile(),
         builder: (context, snapshot) {
           final profile = snapshot.data;
           final target = profile?.monthlyTarget ?? 200000.0;
@@ -83,7 +83,7 @@ class PerformanceScreen extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
-                                color: percent >= 100 ? Colors.green.shade700 : CareOsisColors.primary,
+                                color: percent >= 100 ? Colors.green.shade700 : CareOsisColors.medicalEmeraldPrimary,
                               ),
                             ),
                           ),
@@ -227,7 +227,7 @@ class PerformanceScreen extends StatelessWidget {
                 // Supabase Cloud Sync Action
                 ElevatedButton.icon(
                   onPressed: () async {
-                    final mrId = profile?.empId ?? widget.repository.currentUser?.id ?? "MR";
+                    final mrId = profile?.empId ?? repository.currentUser?.id ?? "MR";
                     final success = await SupabaseSyncService.instance.syncTargetIncentive(
                       mrId: mrId,
                       month: currentMonth,
@@ -252,7 +252,7 @@ class PerformanceScreen extends StatelessWidget {
                   label: const Text("Sync Target & Payout with Cloud"),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    backgroundColor: CareOsisColors.primary,
+                    backgroundColor: CareOsisColors.medicalEmeraldPrimary,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
@@ -331,7 +331,7 @@ class _IncentiveScreenState extends State<IncentiveScreen> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<MRProfile?>(
-      stream: widget.repository.getProfile(),
+      stream: widget.repository.getMRProfile(),
       builder: (context, snapshot) {
         final profile = snapshot.data;
         final target = profile?.monthlyTarget ?? 200000.0;
@@ -491,9 +491,9 @@ class _IncentiveScreenState extends State<IncentiveScreen> {
                 ),
               ],
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 }
@@ -515,7 +515,7 @@ class LeaderboardScreen extends StatelessWidget {
             return const CareOsisEmptyState(
               icon: Icons.leaderboard_outlined,
               title: "No Leaderboard Data",
-              subtitle: "Monthly zonal rankings will display here as representatives achieve their quotas.",
+              message: "Monthly zonal rankings will display here as representatives achieve their quotas.",
             );
           }
 

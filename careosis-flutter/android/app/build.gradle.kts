@@ -7,7 +7,7 @@ plugins {
 android {
     namespace = "com.careosis.mr"
     compileSdk = 36
-    ndkVersion = flutter.ndkVersion
+    // ndkVersion = flutter.ndkVersion
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

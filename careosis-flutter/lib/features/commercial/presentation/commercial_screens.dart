@@ -7,9 +7,7 @@ import '../../../data/repository/careosis_repository.dart';
 import '../../../data/local/entities/commercial_entities.dart';
 import '../../../data/local/entities/doctor_and_mr_entities.dart';
 import '../../../core/calculations/order_calculator.dart';
-import '../../../core/engine/rule_engine.dart';
 import '../../../core/services/location_tracking_service.dart';
-import 'package:geolocator/geolocator.dart';
 
 class OrderListScreen extends StatelessWidget {
   final CareOsisRepository repository;
@@ -522,7 +520,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 // Primary Check-In / Check-Out Action Card
                 Card(
                   elevation: 2,
-                  shape: RoundedCornerShape(20),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                   color: isCheckedIn ? const Color(0xFFF0FDF4) : Colors.white,
                   child: Padding(
                     padding: const EdgeInsets.all(20),
@@ -564,7 +562,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                               backgroundColor: CareOsisColors.medicalEmeraldPrimary,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                              shape: RoundedCornerShape(12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               minimumSize: const Size(double.infinity, 48),
                             ),
                             icon: const Icon(Icons.login),
@@ -580,7 +578,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                               backgroundColor: const Color(0xFFDC2626),
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                              shape: RoundedCornerShape(12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               minimumSize: const Size(double.infinity, 48),
                             ),
                             icon: const Icon(Icons.logout),
@@ -632,7 +630,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                         final item = list[index];
                         return Card(
                           margin: const EdgeInsets.only(bottom: 10),
-                          shape: RoundedCornerShape(12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           child: Padding(
                             padding: const EdgeInsets.all(14),
                             child: Column(

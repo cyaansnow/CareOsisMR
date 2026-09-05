@@ -1,7 +1,6 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/local/db/careosis_database.dart';
 import '../../data/local/entities/admin_and_security_entities.dart';
 import '../../data/local/entities/doctor_and_mr_entities.dart';

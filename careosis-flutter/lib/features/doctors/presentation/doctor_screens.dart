@@ -92,7 +92,7 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
                   return const CareOsisEmptyState(
                     icon: Icons.person_search_outlined,
                     title: "No Prescribers Found",
-                    subtitle: "No doctors match the selected search criteria or category.",
+                    message: "No doctors match the selected search criteria or category.",
                   );
                 }
 
@@ -214,7 +214,7 @@ class DoctorDetailScreen extends StatelessWidget {
                         child: CareOsisEmptyState(
                           icon: Icons.history_outlined,
                           title: "No Previous Calls",
-                          subtitle: "No field visits recorded for this doctor yet.",
+                          message: "No field visits recorded for this doctor yet.",
                         ),
                       );
                     }

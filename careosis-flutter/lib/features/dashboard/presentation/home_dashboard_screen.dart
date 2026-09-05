@@ -142,7 +142,7 @@ class HomeDashboardScreen extends StatelessWidget {
         return Container(
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [CareOsisColors.medicalEmeraldPrimary, CareOsisColors.medicalPrimaryDark],
+              colors: [CareOsisColors.medicalEmeraldPrimary, Color(0xFF004D40)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),

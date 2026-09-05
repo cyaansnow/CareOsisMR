@@ -92,7 +92,7 @@ class ExpenseManagementScreen extends StatelessWidget {
                     child: CareOsisEmptyState(
                       icon: Icons.receipt_long_outlined,
                       title: "No Field Expenses Logged",
-                      subtitle: "Submit mileage, daily food allowance, and field claims to track your reimbursements live.",
+                      message: "Submit mileage, daily food allowance, and field claims to track your reimbursements live.",
                     ),
                   )
                 else
