@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Outer Shield / Circle Glow -->
+    <path
+        android:fillColor="#22FFFFFF"
+        android:pathData="M54,26 C69.46,26 82,38.54 82,54 C82,69.46 69.46,82 54,82 C38.54,82 26,69.46 26,54 C26,38.54 38.54,26 54,26 Z" />
+    
+    <!-- Medical Cross in Clinical White -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M49,36 L59,36 L59,49 L72,49 L72,59 L59,59 L59,72 L49,72 L49,59 L36,59 L36,49 L49,49 Z" />
+    
+    <!-- Metallic Gold Center Ring / Heartbeat Accent -->
+    <path
+        android:fillColor="#D4AF37"
+        android:pathData="M54,42 C58.42,42 62,45.58 62,50 C62,54.42 58.42,58 54,58 C49.58,58 46,54.42 46,50 C46,45.58 49.58,42 54,42 Z" />
+    
+    <!-- Golden Star / Sparkle in Center -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,45 L55.5,48.5 L59,50 L55.5,51.5 L54,55 L52.5,51.5 L49,50 L52.5,48.5 Z" />
+    
+    <!-- Gold Wing Accents -->
+    <path
+        android:fillColor="#F3E5AB"
+        android:pathData="M43,38 C40,35 34,36 34,40 C34,44 42,46 43,46 Z" />
+    <path
+        android:fillColor="#F3E5AB"
+        android:pathData="M65,38 C68,35 74,36 74,40 C74,44 66,46 65,46 Z" />
+</vector>

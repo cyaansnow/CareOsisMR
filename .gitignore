@@ -1,0 +1,74 @@
+# Environment & Secrets
+.env
+.env.*
+!.env.example
+*.jks
+*.keystore
+debug.keystore
+my-upload-key.jks
+
+# Antigravity & Agent Cache
+.antigravity/
+
+# Android & Gradle
+.gradle/
+**/.gradle/
+build/
+**/build/
+captures/
+**/captures/
+local.properties
+**/local.properties
+.kotlin/
+**/.kotlin/
+.cxx/
+**/.cxx/
+.externalNativeBuild/
+**/.externalNativeBuild/
+*.apk
+*.aab
+
+# Flutter & Dart
+.dart_tool/
+**/.dart_tool/
+.flutter-plugins
+**/.flutter-plugins
+.flutter-plugins-dependencies
+**/.flutter-plugins-dependencies
+.packages
+**/.packages
+.pub-cache/
+**/.pub-cache/
+.pub/
+**/.pub/
+
+# Flutter iOS Generated & Ephemeral
+**/ios/Flutter/ephemeral/
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/Flutter/App.framework
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Runner/GeneratedPluginRegistrant.*
+**/ios/**/Pods/
+
+
+# IDE & Editor Settings
+.idea/
+**/.idea/
+*.iml
+**/*.iml
+.vscode/
+**/.vscode/
+
+# OS Specific
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# Logs
+*.log
+
