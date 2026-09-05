@@ -3,6 +3,7 @@ import '../lib/core/calculations/order_calculator.dart';
 import '../lib/core/calculations/expense_calculator.dart';
 import '../lib/core/calculations/training_calculator.dart';
 import '../lib/core/engine/incentive_calculation_engine.dart';
+import '../lib/data/local/entities/commercial_entities.dart';
 
 void main() {
   group('Order Calculator Tests', () {
@@ -152,6 +153,22 @@ void main() {
       expect(result.incentiveRate, 5.0);
       expect(result.baseIncentive, 10000.0);
       expect(result.finalIncentive, 10000.0);
+    });
+  });
+
+  group('Attendance & Field Duty Hours Tests', () {
+    test('ATT-01: Correct calculation of field hours between check-in and check-out', () {
+      final inTime = DateTime(2026, 9, 5, 9, 30);
+      final outTime = DateTime(2026, 9, 5, 17, 45);
+      final duration = AttendanceModel.calculateWorkingDuration(inTime, outTime);
+      expect(duration, '8h 15m');
+    });
+
+    test('ATT-02: Under 1 hour duration formatting', () {
+      final inTime = DateTime(2026, 9, 5, 9, 30);
+      final outTime = DateTime(2026, 9, 5, 10, 15);
+      final duration = AttendanceModel.calculateWorkingDuration(inTime, outTime);
+      expect(duration, '45m');
     });
   });
 }

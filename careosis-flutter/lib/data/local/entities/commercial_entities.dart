@@ -1,4 +1,4 @@
-﻿class Stockist {
+class Stockist {
   final String id;
   final String companyName;
   final String contactPerson;
@@ -307,6 +307,11 @@ class AttendanceModel {
   final int visitsCompleted;
   final String status;
   final String checkInLocation;
+  final String checkOutLocation;
+  final double checkInLatitude;
+  final double checkInLongitude;
+  final double checkOutLatitude;
+  final double checkOutLongitude;
   final bool isSynced;
 
   const AttendanceModel({
@@ -318,8 +323,47 @@ class AttendanceModel {
     this.visitsCompleted = 0,
     this.status = "Present",
     this.checkInLocation = "Assigned Field Territory",
+    this.checkOutLocation = "",
+    this.checkInLatitude = 0.0,
+    this.checkInLongitude = 0.0,
+    this.checkOutLatitude = 0.0,
+    this.checkOutLongitude = 0.0,
     this.isSynced = false,
   });
+
+  AttendanceModel copyWith({
+    String? id,
+    String? date,
+    String? checkInTime,
+    String? checkOutTime,
+    String? workingHours,
+    int? visitsCompleted,
+    String? status,
+    String? checkInLocation,
+    String? checkOutLocation,
+    double? checkInLatitude,
+    double? checkInLongitude,
+    double? checkOutLatitude,
+    double? checkOutLongitude,
+    bool? isSynced,
+  }) {
+    return AttendanceModel(
+      id: id ?? this.id,
+      date: date ?? this.date,
+      checkInTime: checkInTime ?? this.checkInTime,
+      checkOutTime: checkOutTime ?? this.checkOutTime,
+      workingHours: workingHours ?? this.workingHours,
+      visitsCompleted: visitsCompleted ?? this.visitsCompleted,
+      status: status ?? this.status,
+      checkInLocation: checkInLocation ?? this.checkInLocation,
+      checkOutLocation: checkOutLocation ?? this.checkOutLocation,
+      checkInLatitude: checkInLatitude ?? this.checkInLatitude,
+      checkInLongitude: checkInLongitude ?? this.checkInLongitude,
+      checkOutLatitude: checkOutLatitude ?? this.checkOutLatitude,
+      checkOutLongitude: checkOutLongitude ?? this.checkOutLongitude,
+      isSynced: isSynced ?? this.isSynced,
+    );
+  }
 
   Map<String, dynamic> toMap() => {
         'id': id,
@@ -330,6 +374,11 @@ class AttendanceModel {
         'visitsCompleted': visitsCompleted,
         'status': status,
         'checkInLocation': checkInLocation,
+        'checkOutLocation': checkOutLocation,
+        'checkInLatitude': checkInLatitude,
+        'checkInLongitude': checkInLongitude,
+        'checkOutLatitude': checkOutLatitude,
+        'checkOutLongitude': checkOutLongitude,
         'isSynced': isSynced ? 1 : 0,
       };
 
@@ -342,8 +391,23 @@ class AttendanceModel {
         visitsCompleted: (map['visitsCompleted'] as num?)?.toInt() ?? 0,
         status: map['status'] as String? ?? "Present",
         checkInLocation: map['checkInLocation'] as String? ?? "Assigned Field Territory",
+        checkOutLocation: map['checkOutLocation'] as String? ?? "",
+        checkInLatitude: (map['checkInLatitude'] as num?)?.toDouble() ?? 0.0,
+        checkInLongitude: (map['checkInLongitude'] as num?)?.toDouble() ?? 0.0,
+        checkOutLatitude: (map['checkOutLatitude'] as num?)?.toDouble() ?? 0.0,
+        checkOutLongitude: (map['checkOutLongitude'] as num?)?.toDouble() ?? 0.0,
         isSynced: map['isSynced'] == 1 || map['isSynced'] == true,
       );
+
+  static String calculateWorkingDuration(DateTime checkIn, DateTime checkOut) {
+    final diff = checkOut.difference(checkIn);
+    final hours = diff.inHours;
+    final minutes = diff.inMinutes % 60;
+    if (hours == 0) {
+      return "${minutes}m";
+    }
+    return "${hours}h ${minutes}m";
+  }
 }
 
 class RoutePlanModel {

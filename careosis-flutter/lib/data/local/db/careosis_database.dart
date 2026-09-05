@@ -89,6 +89,16 @@ class CareOsisDatabase {
   final _salaryRulesController = StreamController<List<SalaryRule>>.broadcast();
   final _auditLogsController = StreamController<List<AuditLog>>.broadcast();
 
+  Stream<MRProfile?> get profileStream async* {
+    yield mrProfiles.values.firstOrNull;
+    yield* _profileController.stream;
+  }
+
+  Stream<List<AttendanceModel>> get attendanceStream async* {
+    yield attendance.values.toList()..sort((a, b) => b.date.compareTo(a.date));
+    yield* _attendanceController.stream;
+  }
+
   void notifyProfile() => _profileController.add(mrProfiles.values.firstOrNull);
   void notifyDoctors() => _doctorsController.add(doctors.values.toList()..sort((a, b) => b.priority.compareTo(a.priority)));
   void notifyVisits() => _visitsController.add(doctorVisits.values.toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt)));
@@ -118,3 +128,4 @@ class CareOsisDatabase {
   void notifySalaryRules() => _salaryRulesController.add(salaryRules.values.toList()..sort((a, b) => b.updatedAt.compareTo(a.updatedAt)));
   void notifyAuditLogs() => _auditLogsController.add(auditLogs.reversed.toList());
 }
+

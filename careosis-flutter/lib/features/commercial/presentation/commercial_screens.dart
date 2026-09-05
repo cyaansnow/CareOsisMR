@@ -5,8 +5,11 @@ import '../../../core/theme/careosis_theme.dart';
 import '../../../core/components/careosis_components.dart';
 import '../../../data/repository/careosis_repository.dart';
 import '../../../data/local/entities/commercial_entities.dart';
+import '../../../data/local/entities/doctor_and_mr_entities.dart';
 import '../../../core/calculations/order_calculator.dart';
 import '../../../core/engine/rule_engine.dart';
+import '../../../core/services/location_tracking_service.dart';
+import 'package:geolocator/geolocator.dart';
 
 class OrderListScreen extends StatelessWidget {
   final CareOsisRepository repository;
@@ -211,85 +214,490 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   }
 }
 
-class AttendanceScreen extends StatelessWidget {
+class AttendanceScreen extends StatefulWidget {
   final CareOsisRepository repository;
   const AttendanceScreen({super.key, required this.repository});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: const CareOsisTopBar(title: "Daily Attendance & GPS", showBack: true),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+  State<AttendanceScreen> createState() => _AttendanceScreenState();
+}
+
+class _AttendanceScreenState extends State<AttendanceScreen> {
+  bool _isLoadingGps = false;
+
+  Future<void> _handleCheckIn(MRProfile? profile) async {
+    setState(() => _isLoadingGps = true);
+    try {
+      final pos = await LocationTrackingService.instance.getCurrentPosition();
+      final lat = pos?.latitude ?? 28.6139;
+      final lng = pos?.longitude ?? 77.2090;
+      final acc = pos != null ? "${pos.accuracy.toStringAsFixed(0)}m" : "Estimated";
+      final locationStr = "GPS: ${lat.toStringAsFixed(4)}° N, ${lng.toStringAsFixed(4)}° E (±$acc)";
+
+      final empId = profile?.empId ?? widget.repository.currentUser?.id ?? "CO-MR-8492";
+      await widget.repository.checkInMR(
+        empId: empId,
+        locationName: locationStr,
+        latitude: lat,
+        longitude: lng,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(child: Text("Field Duty Started! $locationStr")),
+              ],
+            ),
+            backgroundColor: CareOsisColors.medicalEmeraldPrimary,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Error during check-in: $e"),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoadingGps = false);
+    }
+  }
+
+  Future<void> _handleCheckOut(MRProfile? profile) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
           children: [
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    const Icon(Icons.location_on, color: CareOsisColors.medicalEmeraldPrimary, size: 48),
-                    const SizedBox(height: 8),
-                    const Text("Today: 21 Aug 2026", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    const Text("Assigned Beat: North Delhi Central", style: TextStyle(color: Colors.black54)),
-                    const SizedBox(height: 16),
-                    ElevatedButton.icon(
-                      onPressed: () async {
-                        final timeStr = DateFormat("hh:mm a").format(DateTime.now());
-                        final user = repository.currentUser;
-                        final attRule = repository.resolveRule("ATTENDANCE", employeeId: user?.id, regionId: user?.assignedRegionIds);
-                        final gpsRule = repository.resolveRule("GPS", employeeId: user?.id, regionId: user?.assignedRegionIds);
+            Icon(Icons.logout, color: CareOsisColors.statusOrange),
+            SizedBox(width: 8),
+            Text("End Field Duty?"),
+          ],
+        ),
+        content: const Text(
+          "This will record your check-out timestamp, calculate total field hours, and stop background GPS location tracking.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: CareOsisColors.statusOrange),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text("Confirm Check-Out"),
+          ),
+        ],
+      ),
+    );
 
-                        final eval = RuleEngine.evaluateAttendance(
-                          checkInTimeFormatted: timeStr,
-                          accuracyMeters: 38.0,
-                          attendanceRule: attRule,
-                          gpsRule: gpsRule,
-                        );
+    if (confirm != true) return;
 
-                        final att = AttendanceModel(
-                          id: "2026-08-21",
-                          date: "2026-08-21",
-                          checkInTime: timeStr,
-                          status: eval.requiresApproval ? "Exception" : (eval.isLate ? "Late" : "Present"),
-                          checkInLocation: "GPS: 28.7041° N, 77.1025° E (Accuracy: 38m)",
-                        );
+    setState(() => _isLoadingGps = true);
+    try {
+      final pos = await LocationTrackingService.instance.getCurrentPosition();
+      final lat = pos?.latitude ?? 28.6139;
+      final lng = pos?.longitude ?? 77.2090;
+      final acc = pos != null ? "${pos.accuracy.toStringAsFixed(0)}m" : "Estimated";
+      final locationStr = "GPS: ${lat.toStringAsFixed(4)}° N, ${lng.toStringAsFixed(4)}° E (±$acc)";
 
-                        await repository.markAttendance(att, user?.id ?? "CO-MR-8492");
+      final empId = profile?.empId ?? widget.repository.currentUser?.id ?? "CO-MR-8492";
+      final updated = await widget.repository.checkOutMR(
+        empId: empId,
+        locationName: locationStr,
+        latitude: lat,
+        longitude: lng,
+      );
 
-                        if (eval.requiresApproval) {
-                          await repository.submitApprovalRequest(
-                            module: "ATTENDANCE",
-                            entityId: "2026-08-21",
-                            title: "Attendance Exception ($timeStr)",
-                            details: eval.exceptionReason,
-                            submittedBy: user?.id ?? "CO-MR-8492",
-                            submittedByName: user?.name ?? "Aman Chhabra",
-                            scope: user?.assignedRegionIds ?? "REG-001",
-                            sla: "24h",
-                          );
-                        }
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.verified, color: CareOsisColors.medicalEmeraldPrimary),
+                SizedBox(width: 8),
+                Text("Field Duty Completed"),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Total Working Hours: ${updated?.workingHours ?? 'Completed'}",
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 10),
+                Text("Check-In: ${updated?.checkInTime ?? '--'}"),
+                Text("Check-Out: ${updated?.checkOutTime ?? '--'}"),
+                const SizedBox(height: 10),
+                const Text(
+                  "GPS tracking has been safely deactivated.",
+                  style: TextStyle(color: Colors.black54, fontSize: 13),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text("OK"),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Error during check-out: $e"),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoadingGps = false);
+    }
+  }
 
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(eval.requiresApproval
-                                  ? "Check-in logged with exception. Sent to Admin for review."
-                                  : "Geotagged check-in verified on-time!"),
-                              backgroundColor: eval.requiresApproval ? Colors.orange.shade800 : CareOsisColors.medicalEmeraldPrimary,
+  @override
+  Widget build(BuildContext context) {
+    final todayStr = DateFormat("EEEE, dd MMMM yyyy").format(DateTime.now());
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: const CareOsisTopBar(
+        title: "Daily Attendance & GPS",
+        subtitle: "Field Duty Lifecycle & Geotag",
+        showBack: true,
+      ),
+      body: StreamBuilder<MRProfile?>(
+        stream: widget.repository.getMRProfile(),
+        builder: (context, profileSnapshot) {
+          final profile = profileSnapshot.data;
+          final isCheckedIn = profile?.isCheckedInToday ?? false;
+          final checkInTime = profile?.checkInTime ?? "";
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Top Date & Territory Header
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 22,
+                        backgroundColor: CareOsisColors.medicalEmeraldPrimary.withOpacity(0.12),
+                        child: const Icon(Icons.badge_outlined, color: CareOsisColors.medicalEmeraldPrimary),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              todayStr,
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                             ),
-                          );
-                        }
-                      },
-                      icon: const Icon(Icons.fingerprint),
-                      label: const Text("Geotagged Check-In"),
+                            const SizedBox(height: 2),
+                            Text(
+                              profile?.territory ?? "Assigned Field Beat",
+                              style: const TextStyle(fontSize: 12, color: Colors.black54),
+                            ),
+                          ],
+                        ),
+                      ),
+                      CareOsisStatusChip(
+                        label: isCheckedIn ? "ON DUTY" : "OFF DUTY",
+                        color: isCheckedIn ? CareOsisColors.statusGreen : Colors.grey,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Live GPS Tracking Status Banner
+                StreamBuilder<bool>(
+                  stream: LocationTrackingService.instance.trackingStateStream,
+                  builder: (context, trackingSnapshot) {
+                    final trackingActive = trackingSnapshot.data ?? false;
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: trackingActive ? const Color(0xFFECFDF5) : const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: trackingActive ? const Color(0xFFA7F3D0) : const Color(0xFFCBD5E1),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            trackingActive ? Icons.my_location : Icons.location_disabled,
+                            color: trackingActive ? const Color(0xFF059669) : Colors.grey.shade600,
+                            size: 22,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  trackingActive ? "GPS Tracking Active" : "GPS Tracking Inactive",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                    color: trackingActive ? const Color(0xFF065F46) : Colors.grey.shade800,
+                                  ),
+                                ),
+                                Text(
+                                  trackingActive
+                                      ? "Background location updates running during duty"
+                                      : "Check in below to start tracking your route",
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: trackingActive ? const Color(0xFF047857) : Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            width: 10,
+                            height: 10,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: trackingActive ? Colors.greenAccent.shade700 : Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Primary Check-In / Check-Out Action Card
+                Card(
+                  elevation: 2,
+                  shape: RoundedCornerShape(20),
+                  color: isCheckedIn ? const Color(0xFFF0FDF4) : Colors.white,
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      children: [
+                        Icon(
+                          isCheckedIn ? Icons.verified_user : Icons.fingerprint,
+                          size: 56,
+                          color: isCheckedIn ? CareOsisColors.medicalEmeraldPrimary : Colors.blueGrey,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          isCheckedIn ? "You are Checked In" : "Ready for Field Duty",
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          isCheckedIn
+                              ? "Checked in at $checkInTime. GPS tracking location coordinates."
+                              : "Tap below to capture live GPS coordinates and start field duty.",
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.black54, fontSize: 13),
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Action Button
+                        if (_isLoadingGps)
+                          const Column(
+                            children: [
+                              CircularProgressIndicator(),
+                              SizedBox(height: 10),
+                              Text("Acquiring GPS Fix...", style: TextStyle(fontSize: 12, color: Colors.black54)),
+                            ],
+                          )
+                        else if (!isCheckedIn)
+                          ElevatedButton.icon(
+                            onPressed: () => _handleCheckIn(profile),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: CareOsisColors.medicalEmeraldPrimary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                              shape: RoundedCornerShape(12),
+                              minimumSize: const Size(double.infinity, 48),
+                            ),
+                            icon: const Icon(Icons.login),
+                            label: const Text(
+                              "Start Duty (Geotagged Check-In)",
+                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                            ),
+                          )
+                        else
+                          ElevatedButton.icon(
+                            onPressed: () => _handleCheckOut(profile),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFDC2626),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                              shape: RoundedCornerShape(12),
+                              minimumSize: const Size(double.infinity, 48),
+                            ),
+                            icon: const Icon(Icons.logout),
+                            label: const Text(
+                              "End Duty (Geotagged Check-Out)",
+                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Attendance Logs History Header
+                const Row(
+                  children: [
+                    Icon(Icons.history, size: 20, color: CareOsisColors.medicalEmeraldPrimary),
+                    SizedBox(width: 8),
+                    Text(
+                      "Field Attendance History",
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
-              ),
+                const SizedBox(height: 10),
+
+                // Live Attendance Stream List
+                StreamBuilder<List<AttendanceModel>>(
+                  stream: widget.repository.getAllAttendance(),
+                  builder: (context, attendanceSnapshot) {
+                    final list = attendanceSnapshot.data ?? [];
+
+                    if (list.isEmpty) {
+                      return const Card(
+                        child: CareOsisEmptyState(
+                          icon: Icons.calendar_month,
+                          title: "No Attendance Records Found",
+                          message: "Your daily check-in logs and field duty hours will appear here.",
+                        ),
+                      );
+                    }
+
+                    return ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: list.length,
+                      itemBuilder: (context, index) {
+                        final item = list[index];
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          shape: RoundedCornerShape(12),
+                          child: Padding(
+                            padding: const EdgeInsets.all(14),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      item.date,
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                    ),
+                                    CareOsisStatusChip(label: item.status),
+                                  ],
+                                ),
+                                const Divider(height: 16),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text("Check-In", style: TextStyle(fontSize: 11, color: Colors.black54)),
+                                          Text(
+                                            item.checkInTime.isNotEmpty ? item.checkInTime : "--",
+                                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text("Check-Out", style: TextStyle(fontSize: 11, color: Colors.black54)),
+                                          Text(
+                                            item.checkOutTime.isNotEmpty ? item.checkOutTime : "--",
+                                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text("Duty Hours", style: TextStyle(fontSize: 11, color: Colors.black54)),
+                                          Text(
+                                            item.workingHours.isNotEmpty ? item.workingHours : "Active",
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                              color: item.workingHours.isNotEmpty
+                                                  ? CareOsisColors.medicalEmeraldPrimary
+                                                  : CareOsisColors.statusOrange,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (item.checkInLocation.isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.pin_drop, size: 14, color: Colors.black45),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          item.checkInLocation,
+                                          style: const TextStyle(fontSize: 11, color: Colors.black54),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

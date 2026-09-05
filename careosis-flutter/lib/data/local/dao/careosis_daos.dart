@@ -10,7 +10,7 @@ class MRProfileDao {
   MRProfileDao(this._db);
 
   Stream<MRProfile?> getProfile() {
-    return Stream.value(_db.mrProfiles.values.firstOrNull);
+    return _db.profileStream;
   }
 
   MRProfile? getProfileSync() {
@@ -364,7 +364,11 @@ class CommercialDao {
   }
 
   Stream<List<AttendanceModel>> getAllAttendance() {
-    return Stream.value(_db.attendance.values.toList()..sort((a, b) => b.date.compareTo(a.date)));
+    return _db.attendanceStream;
+  }
+
+  AttendanceModel? getAttendanceByIdSync(String id) {
+    return _db.attendance[id];
   }
 
   Future<void> insertAttendance(AttendanceModel attendance) async {

@@ -92,6 +92,8 @@ class HomeDashboardScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         _buildIncentiveCard(context),
+                        const SizedBox(height: 12),
+                        _buildAttendanceBanner(context),
                         const SizedBox(height: 16),
                         _buildKpiGrid(context),
                         const SizedBox(height: 16),
@@ -290,14 +292,79 @@ class HomeDashboardScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildAttendanceBanner(BuildContext context) {
+    return StreamBuilder<MRProfile?>(
+      stream: repository.getMRProfile(),
+      builder: (context, snapshot) {
+        final profile = snapshot.data;
+        final isCheckedIn = profile?.isCheckedInToday ?? false;
+        final checkInTime = profile?.checkInTime ?? "";
+
+        return InkWell(
+          onTap: () => context.push('/attendance'),
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: isCheckedIn ? const Color(0xFFF0FDF4) : const Color(0xFFFEF2F2),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isCheckedIn ? const Color(0xFF86EFAC) : const Color(0xFFFECACA),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  isCheckedIn ? Icons.verified_user : Icons.fingerprint,
+                  color: isCheckedIn ? CareOsisColors.medicalEmeraldPrimary : const Color(0xFFDC2626),
+                  size: 26,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isCheckedIn ? "Field Duty Active • GPS Tracking On" : "Field Duty Inactive • Not Checked In",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                          color: isCheckedIn ? const Color(0xFF166534) : const Color(0xFF991B1B),
+                        ),
+                      ),
+                      Text(
+                        isCheckedIn
+                            ? "Checked in at $checkInTime. Tap to view duty log or check out."
+                            : "Tap to record geotagged attendance and start GPS tracking.",
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isCheckedIn ? const Color(0xFF15803D) : const Color(0xFFB91C1C),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 14,
+                  color: isCheckedIn ? const Color(0xFF166534) : const Color(0xFF991B1B),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildQuickActions(BuildContext context) {
     final actions = [
+      ("Attendance", Icons.fingerprint, '/attendance'),
       ("Prescribers", Icons.people_outline, '/doctors'),
       ("Start Visit", Icons.add_location_alt_outlined, '/visits'),
       ("POB Order", Icons.add_shopping_cart, '/orders/create'),
       ("Log Expense", Icons.receipt_long_outlined, '/expenses/add'),
-      ("Academy", Icons.menu_book_outlined, '/academy'),
-      ("AI Pitch Desk", Icons.smart_toy_outlined, '/help'),
+      ("Field Route", Icons.navigation_outlined, '/routes'),
     ];
 
     return Column(

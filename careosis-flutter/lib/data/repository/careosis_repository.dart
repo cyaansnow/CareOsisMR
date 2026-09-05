@@ -11,6 +11,7 @@ import '../../core/engine/incentive_calculation_engine.dart';
 import '../../core/services/audit_service.dart';
 import '../../core/services/approval_service.dart';
 import '../../core/engine/rule_engine.dart';
+import '../../core/services/location_tracking_service.dart';
 
 class CareOsisRepository {
   final CareOsisDatabase _database;
@@ -316,6 +317,125 @@ class CareOsisRepository {
 
   // Attendance & Routes
   Stream<List<AttendanceModel>> getAllAttendance() => _database.commercialDao.getAllAttendance();
+
+  AttendanceModel? getTodayAttendanceSync() {
+    final today = DateFormat("yyyy-MM-dd").format(DateTime.now());
+    return _database.commercialDao.getAttendanceByIdSync(today);
+  }
+
+  Future<AttendanceModel> checkInMR({
+    required String empId,
+    required String locationName,
+    double latitude = 0.0,
+    double longitude = 0.0,
+  }) async {
+    final now = DateTime.now();
+    final today = DateFormat("yyyy-MM-dd").format(now);
+    final timeStr = DateFormat("hh:mm a").format(now);
+
+    final existing = _database.commercialDao.getAttendanceByIdSync(today);
+    final att = AttendanceModel(
+      id: today,
+      date: today,
+      checkInTime: timeStr,
+      checkOutTime: "",
+      workingHours: "",
+      visitsCompleted: existing?.visitsCompleted ?? 0,
+      status: "Present",
+      checkInLocation: locationName,
+      checkInLatitude: latitude,
+      checkInLongitude: longitude,
+      isSynced: false,
+    );
+
+    await _database.commercialDao.insertAttendance(att);
+    await _database.mrProfileDao.updateCheckIn(
+      empId,
+      isCheckedIn: true,
+      time: timeStr,
+    );
+
+    // Start background GPS tracking
+    await LocationTrackingService.instance.startTracking(
+      mrId: empId,
+      attendanceId: today,
+    );
+
+    await _database.platformDao.enqueueSync(
+      SyncQueueModel(
+        entityType: "ATTENDANCE",
+        entityId: att.id,
+        action: "CHECK_IN",
+        payloadPreview: "MR $empId Checked-In on $today at $timeStr ($locationName)",
+        createdAt: now.millisecondsSinceEpoch,
+      ),
+    );
+
+    return att;
+  }
+
+  Future<AttendanceModel?> checkOutMR({
+    required String empId,
+    required String locationName,
+    double latitude = 0.0,
+    double longitude = 0.0,
+  }) async {
+    final now = DateTime.now();
+    final today = DateFormat("yyyy-MM-dd").format(now);
+    final timeStr = DateFormat("hh:mm a").format(now);
+
+    final existing = _database.commercialDao.getAttendanceByIdSync(today);
+
+    // Calculate working duration
+    String hoursStr = "8h 00m";
+    if (existing != null && existing.checkInTime.isNotEmpty) {
+      try {
+        final parsedCheckIn = DateFormat("hh:mm a").parse(existing.checkInTime);
+        final checkInDt = DateTime(now.year, now.month, now.day, parsedCheckIn.hour, parsedCheckIn.minute);
+        hoursStr = AttendanceModel.calculateWorkingDuration(checkInDt, now);
+      } catch (_) {
+        hoursStr = "Field Completed";
+      }
+    }
+
+    final updated = (existing ?? AttendanceModel(
+      id: today,
+      date: today,
+      checkInTime: timeStr,
+      checkInLocation: locationName,
+    )).copyWith(
+      checkOutTime: timeStr,
+      checkOutLocation: locationName,
+      checkOutLatitude: latitude,
+      checkOutLongitude: longitude,
+      workingHours: hoursStr,
+      status: "Completed",
+      isSynced: false,
+    );
+
+    await _database.commercialDao.insertAttendance(updated);
+    await _database.mrProfileDao.updateCheckIn(
+      empId,
+      isCheckedIn: false,
+      time: "",
+    );
+
+    // Stop background GPS tracking
+    await LocationTrackingService.instance.stopTracking();
+
+    await _database.platformDao.enqueueSync(
+      SyncQueueModel(
+        entityType: "ATTENDANCE",
+        entityId: updated.id,
+        action: "CHECK_OUT",
+        payloadPreview: "MR $empId Checked-Out on $today at $timeStr. Duration: $hoursStr",
+        createdAt: now.millisecondsSinceEpoch,
+      ),
+    );
+
+    return updated;
+  }
+
   Future<void> markAttendance(AttendanceModel attendance, String empId) async {
     await _database.commercialDao.insertAttendance(attendance);
     await _database.mrProfileDao.updateCheckIn(
